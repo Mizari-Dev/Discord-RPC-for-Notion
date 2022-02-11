@@ -1,14 +1,15 @@
 {
   "name": "Notion",
-  "version": "2.0.18",
+  "version": "2.0.21",
   "main": "./main/main.js",
   "author": "Notion Labs, Incorporated",
   "description": "Notion desktop application",
   "dependencies": {
-    "@sentry/electron": "2.4.0",
+    "@sentry/electron": "2.5.4",
     "better-sqlite3": "git://github.com/makenotion/better-sqlite3.git#0d1ffa139d76625ab99d856bb3adc0c920ce609f",
     "bufferutil": "4.0.3",
     "cld": "2.5.1",
+    "csp_evaluator": "1.1.0",
     "discord-rpc": "^4.0.1",
     "electron-log": "4.1.1",
     "electron-updater": "4.1.2",

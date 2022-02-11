@@ -392,6 +392,9 @@ const electronApi = {
     getCookie: (cookieName) => {
         return notionIpc.invokeMainHandler("notion:get-cookie", cookieName);
     },
+    setCookie: (args) => {
+        notionIpc.sendToMainListeners("notion:set-cookie", args);
+    },
     setLogglyData: data => {
         notionIpc.sendToMainListeners("notion:set-loggly-data", data);
     },
