@@ -465,10 +465,6 @@ const rpcOpt = {
     {
       label: "notion.so",
       url: "https://www.notion.so/"
-    },
-    {
-      label: "Contact Mizari",
-      url: "https://discord.gg/N49Gxsu"
     }
   ]
 };
