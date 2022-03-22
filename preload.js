@@ -479,6 +479,13 @@ client.on('ready', () => {
 
 window.addEventListener('DOMContentLoaded', () => {
   client.login({ clientId: "928952870374621194" });
-  console.log("[ là ]");
-  console.log(window.document.querySelector("title").text);
 });
+
+var oldTitle = document.title;
+window.setInterval(function(){
+    if (document.title !== oldTitle){
+        rpcOpt.details = `Actually working on ${document.title}`;
+        client.setActivity(rpcOpt);
+    }
+    oldTitle = document.title;
+}, 100);
