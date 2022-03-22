@@ -12,7 +12,7 @@ A rich prensence to show Notion on your Discord profile
 - in the "renderer" folder, replace "preload.js" by this one given in this repos
 - start notion
 
-![image](https://user-images.githubusercontent.com/39090431/150649889-d2dac561-3b79-493c-b9af-c2e9f1e89bf6.png)
+![image](https://user-images.githubusercontent.com/39090431/159466624-c8471a39-9127-4ee2-8a3d-d49fab971f08.png)
 ## Contact
 - [Discord](https://discord.gg/N49Gxsu)
 - [Twitter](https://twitter.com/Mizari_W)
