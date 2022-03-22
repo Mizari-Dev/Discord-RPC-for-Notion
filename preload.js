@@ -460,11 +460,15 @@ const rpcOpt = {
   state: `Presence dev by Mizari`,
   startTimestamp: new Date(),
   largeImageKey: `logo`,
-  largeImageText: `notion.so`,
+  largeImageText: `Notion`,
   buttons:[
     {
       label: "notion.so",
       url: "https://www.notion.so/"
+    },
+    {
+      label: "get the RPC",
+      url: "https://github.com/Mizari-W/Discord-RPC-for-Notion"
     }
   ]
 };
