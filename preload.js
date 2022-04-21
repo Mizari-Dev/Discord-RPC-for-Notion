@@ -456,7 +456,7 @@ const RPC = require('discord-rpc');
 
 const client = new RPC.Client({ transport: 'ipc' });
 const rpcOpt = {
-  details: `Actually working (I think ?)`,
+  details: `Currently working (I think ?)`,
   state: `Presence dev by Mizari`,
   startTimestamp: new Date(),
   largeImageKey: `logo`,
@@ -484,7 +484,7 @@ window.addEventListener('DOMContentLoaded', () => {
 var oldTitle = document.title;
 window.setInterval(function(){
     if (document.title !== oldTitle){
-        rpcOpt.details = `Actually working on ${document.title}`;
+        rpcOpt.details = `Currently working on ${document.title}`;
         client.setActivity(rpcOpt);
     }
     oldTitle = document.title;
