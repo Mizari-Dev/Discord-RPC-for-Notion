@@ -456,11 +456,11 @@ const RPC = require('discord-rpc');
 
 const client = new RPC.Client({ transport: 'ipc' });
 const rpcOpt = {
-  details: `Currently working (I think ?)`,
-  state: `Presence dev by Mizari`,
+  details: `Currently working (I guess ?)`,
+  state: `In a certain workspace`,
   startTimestamp: new Date(),
   largeImageKey: `logo`,
-  largeImageText: `Notion`,
+  largeImageText: `dev by Mizari`,
   buttons:[
     {
       label: "notion.so",
@@ -482,10 +482,29 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 var oldTitle = document.title;
+var oldWorkspace = "";
+var modified = false;
+
 window.setInterval(function(){
     if (document.title !== oldTitle){
-        rpcOpt.details = `Currently working on ${document.title}`;
-        client.setActivity(rpcOpt);
+      rpcOpt.details = `Currently working on ${document.title}`;
+      modified = true;
     }
     oldTitle = document.title;
+
+    try {
+      var newWorkspace = document.querySelector("#notion-app").querySelector("div").querySelector("div").querySelector("div").querySelector("div").querySelector("div").querySelector("div").querySelectorAll(".notranslate")[1].querySelector("div").querySelector("div").textContent;
+    } catch (e) {
+      var newWorkspace = "";
+    }
+    if (newWorkspace !== null && newWorkspace !== oldWorkspace){
+      rpcOpt.state = `In ${newWorkspace}`;
+      modified = true;
+    }
+    oldWorkspace = newWorkspace;
+
+    if (modified){
+      modified = false;
+      client.setActivity(rpcOpt);
+    }
 }, 100);
