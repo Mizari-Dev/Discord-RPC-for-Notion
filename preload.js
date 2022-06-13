@@ -24,11 +24,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const process_1 = __importDefault(require("process"));
 const electron_1 = __importDefault(require("electron"));
-const notionIpc = __importStar(require("../helpers/notionIpc"));
+const remote = __importStar(require("@electron/remote"));
+const rendererIpc = __importStar(require("./renderIpc"));
 const urlHelpers = __importStar(require("../shared/urlHelpers"));
 const electronApi = {
     openInNewWindow(urlPath) {
-        notionIpc.sendToMainListeners("notion:create-window", urlPath);
+        rendererIpc.sendToMainListeners("notion:create-window", urlPath);
     },
     openExternalUrl(url) {
         const sanitizedUrl = urlHelpers.sanitizeUrlStrict(url);
@@ -37,18 +38,18 @@ const electronApi = {
         }
     },
     clearBrowserHistory() {
-        electron_1.default.remote.getCurrentWebContents().clearHistory();
+        remote.getCurrentWebContents().clearHistory();
     },
     getAppVersion() {
-        return electron_1.default.remote.app.getVersion();
+        return remote.app.getVersion();
     },
     setBadge(str) {
-        const dock = electron_1.default.remote.app.dock;
+        const dock = remote.app.dock;
         if (dock) {
             dock.setBadge(str);
             return;
         }
-        const win = electron_1.default.remote.getCurrentWindow();
+        const win = remote.getCurrentWindow();
         if (win.setOverlayIcon) {
             if (str === "") {
                 win.setOverlayIcon(null, "");
@@ -73,10 +74,10 @@ const electronApi = {
             ctx.fillStyle = "white";
             ctx.textAlign = "center";
             ctx.fillText(str, centerX, centerY + 3.5 * scale * window.devicePixelRatio);
-            const pngData = electron_1.default.remote.nativeImage
+            const pngData = remote.nativeImage
                 .createFromDataURL(canvas.toDataURL("image/png"))
                 .toPNG();
-            const img = electron_1.default.remote.nativeImage.createFromBuffer(pngData, {
+            const img = remote.nativeImage.createFromBuffer(pngData, {
                 scaleFactor: window.devicePixelRatio,
             });
             win.setOverlayIcon(img, `${str} unread notifications`);
@@ -84,51 +85,51 @@ const electronApi = {
     },
     windowFocus: {
         addListener(fn) {
-            electron_1.default.remote.app.addListener("browser-window-focus", fn);
+            remote.app.addListener("browser-window-focus", fn);
         },
         removeListener(fn) {
-            electron_1.default.remote.app.removeListener("browser-window-focus", fn);
+            remote.app.removeListener("browser-window-focus", fn);
         },
     },
     fullscreen: {
         get() {
-            const window = electron_1.default.remote.getCurrentWindow();
+            const window = remote.getCurrentWindow();
             return window && window.isFullScreen();
         },
         addListener(fn) {
-            notionIpc.receiveNotionFromIndex.addListener("notion:full-screen-changed", fn);
+            rendererIpc.receiveNotionFromIndex.addListener("notion:full-screen-changed", fn);
         },
         removeListener(fn) {
-            notionIpc.receiveNotionFromIndex.removeListener("notion:full-screen-changed", fn);
+            rendererIpc.receiveNotionFromIndex.removeListener("notion:full-screen-changed", fn);
         },
     },
     inPageSearch: {
         start(isPeekView) {
-            notionIpc.sendNotionToIndex("search:start", isPeekView);
+            rendererIpc.sendNotionToIndex("search:start", isPeekView);
         },
         stop() {
-            notionIpc.sendNotionToIndex("search:stop");
+            rendererIpc.sendNotionToIndex("search:stop");
         },
         started: {
             addListener(fn) {
-                notionIpc.receiveNotionFromIndex.addListener("search:started", fn);
+                rendererIpc.receiveNotionFromIndex.addListener("search:started", fn);
             },
             removeListener(fn) {
-                notionIpc.receiveNotionFromIndex.removeListener("search:started", fn);
+                rendererIpc.receiveNotionFromIndex.removeListener("search:started", fn);
             },
         },
         stopped: {
             addListener(fn) {
-                notionIpc.receiveNotionFromIndex.addListener("search:stopped", fn);
+                rendererIpc.receiveNotionFromIndex.addListener("search:stopped", fn);
             },
             removeListener(fn) {
-                notionIpc.receiveNotionFromIndex.removeListener("search:stopped", fn);
+                rendererIpc.receiveNotionFromIndex.removeListener("search:stopped", fn);
             },
         },
     },
     zoom: {
         set(scale) {
-            notionIpc.sendNotionToIndex("zoom", scale);
+            rendererIpc.sendNotionToIndex("zoom", scale);
         },
         get() {
             return electron_1.default.webFrame.getZoomFactor();
@@ -148,31 +149,31 @@ const electronApi = {
         }
     },
     setSpellCheckerLanguages: languages => {
-        const session = electron_1.default.remote.getCurrentWebContents().session;
+        const session = remote.getCurrentWebContents().session;
         session.setSpellCheckerLanguages(languages.filter(language => session.availableSpellCheckerLanguages.includes(language)));
     },
     contextMenu: {
         addListener: fn => {
-            electron_1.default.remote.getCurrentWebContents().addListener("context-menu", fn);
+            remote.getCurrentWebContents().addListener("context-menu", fn);
         },
         removeListener: fn => {
-            electron_1.default.remote.getCurrentWebContents().removeListener("context-menu", fn);
+            remote.getCurrentWebContents().removeListener("context-menu", fn);
         },
     },
     replaceMisspelling: (word) => {
-        electron_1.default.remote.getCurrentWebContents().replaceMisspelling(word);
+        remote.getCurrentWebContents().replaceMisspelling(word);
     },
     cut: () => {
-        electron_1.default.remote.getCurrentWebContents().cut();
+        remote.getCurrentWebContents().cut();
     },
     copy: () => {
-        electron_1.default.remote.getCurrentWebContents().copy();
+        remote.getCurrentWebContents().copy();
     },
     paste: () => {
-        electron_1.default.remote.getCurrentWebContents().paste();
+        remote.getCurrentWebContents().paste();
     },
     inspectElement: (x, y) => {
-        electron_1.default.remote.getCurrentWebContents().inspectElement(x, y);
+        remote.getCurrentWebContents().inspectElement(x, y);
     },
     copyText: (text) => {
         electron_1.default.clipboard.writeText(text);
@@ -194,16 +195,16 @@ const electronApi = {
         img.src = src;
     },
     openDevTools: () => {
-        electron_1.default.remote.getCurrentWebContents().openDevTools();
+        remote.getCurrentWebContents().openDevTools();
     },
     setWindowTitle: title => {
-        const browserWindow = electron_1.default.remote.getCurrentWindow();
+        const browserWindow = remote.getCurrentWindow();
         if (browserWindow.getTitle() !== title) {
             browserWindow.setTitle(title);
         }
     },
     toggleMaximized: () => {
-        const win = electron_1.default.remote.getCurrentWindow();
+        const win = remote.getCurrentWindow();
         if (win.isMaximized()) {
             win.unmaximize();
         }
@@ -212,242 +213,241 @@ const electronApi = {
         }
     },
     checkForUpdates() {
-        notionIpc.sendToMainListeners("notion:check-for-updates");
+        rendererIpc.sendToMainListeners("notion:check-for-updates");
     },
     updateReady: {
         addListener(fn) {
-            notionIpc.receiveNotionFromMain.addListener("notion:update-ready", fn);
+            rendererIpc.receiveNotionFromMain.addListener("notion:update-ready", fn);
         },
         removeListener(fn) {
-            notionIpc.receiveNotionFromMain.removeListener("notion:update-ready", fn);
+            rendererIpc.receiveNotionFromMain.removeListener("notion:update-ready", fn);
         },
     },
     installUpdate() {
-        notionIpc.sendToMainListeners("notion:install-update");
+        rendererIpc.sendToMainListeners("notion:install-update");
     },
     updateError: {
         addListener(fn) {
-            notionIpc.receiveNotionFromMain.addListener("notion:update-error", fn);
+            rendererIpc.receiveNotionFromMain.addListener("notion:update-error", fn);
         },
         removeListener(fn) {
-            notionIpc.receiveNotionFromMain.removeListener("notion:update-error", fn);
+            rendererIpc.receiveNotionFromMain.removeListener("notion:update-error", fn);
         },
     },
     updateChecking: {
         addListener(fn) {
-            notionIpc.receiveNotionFromMain.addListener("notion:checking-for-update", fn);
+            rendererIpc.receiveNotionFromMain.addListener("notion:checking-for-update", fn);
         },
         removeListener(fn) {
-            notionIpc.receiveNotionFromMain.removeListener("notion:checking-for-update", fn);
+            rendererIpc.receiveNotionFromMain.removeListener("notion:checking-for-update", fn);
         },
     },
     updateAvailable: {
         addListener(fn) {
-            notionIpc.receiveNotionFromMain.addListener("notion:update-available", fn);
+            rendererIpc.receiveNotionFromMain.addListener("notion:update-available", fn);
         },
         removeListener(fn) {
-            notionIpc.receiveNotionFromMain.removeListener("notion:update-available", fn);
+            rendererIpc.receiveNotionFromMain.removeListener("notion:update-available", fn);
         },
     },
     updateProgress: {
         addListener(fn) {
-            notionIpc.receiveNotionFromMain.addListener("notion:update-progress", fn);
+            rendererIpc.receiveNotionFromMain.addListener("notion:update-progress", fn);
         },
         removeListener(fn) {
-            notionIpc.receiveNotionFromMain.removeListener("notion:update-progress", fn);
+            rendererIpc.receiveNotionFromMain.removeListener("notion:update-progress", fn);
         },
     },
     updateNotAvailable: {
         addListener(fn) {
-            notionIpc.receiveNotionFromMain.addListener("notion:update-not-available", fn);
+            rendererIpc.receiveNotionFromMain.addListener("notion:update-not-available", fn);
         },
         removeListener(fn) {
-            notionIpc.receiveNotionFromMain.removeListener("notion:update-not-available", fn);
+            rendererIpc.receiveNotionFromMain.removeListener("notion:update-not-available", fn);
         },
     },
     checkForAppUpdates() {
-        notionIpc.sendToMainListeners("notion:check-for-app-updates");
+        rendererIpc.sendToMainListeners("notion:check-for-app-updates");
     },
     appUpdateReady: {
         addListener(fn) {
-            notionIpc.receiveNotionFromMain.addListener("notion:app-update-ready", fn);
+            rendererIpc.receiveNotionFromMain.addListener("notion:app-update-ready", fn);
         },
         removeListener(fn) {
-            notionIpc.receiveNotionFromMain.removeListener("notion:app-update-ready", fn);
+            rendererIpc.receiveNotionFromMain.removeListener("notion:app-update-ready", fn);
         },
     },
     appUpdateError: {
         addListener(fn) {
-            notionIpc.receiveNotionFromMain.addListener("notion:app-update-error", fn);
+            rendererIpc.receiveNotionFromMain.addListener("notion:app-update-error", fn);
         },
         removeListener(fn) {
-            notionIpc.receiveNotionFromMain.removeListener("notion:app-update-error", fn);
+            rendererIpc.receiveNotionFromMain.removeListener("notion:app-update-error", fn);
         },
     },
     appUpdateChecking: {
         addListener(fn) {
-            notionIpc.receiveNotionFromMain.addListener("notion:checking-for-app-update", fn);
+            rendererIpc.receiveNotionFromMain.addListener("notion:checking-for-app-update", fn);
         },
         removeListener(fn) {
-            notionIpc.receiveNotionFromMain.removeListener("notion:checking-for-app-update", fn);
+            rendererIpc.receiveNotionFromMain.removeListener("notion:checking-for-app-update", fn);
         },
     },
     appUpdateAvailable: {
         addListener(fn) {
-            notionIpc.receiveNotionFromMain.addListener("notion:app-update-available", fn);
+            rendererIpc.receiveNotionFromMain.addListener("notion:app-update-available", fn);
         },
         removeListener(fn) {
-            notionIpc.receiveNotionFromMain.removeListener("notion:app-update-available", fn);
+            rendererIpc.receiveNotionFromMain.removeListener("notion:app-update-available", fn);
         },
     },
     appUpdateProgress: {
         addListener(fn) {
-            notionIpc.receiveNotionFromMain.addListener("notion:app-update-progress", fn);
+            rendererIpc.receiveNotionFromMain.addListener("notion:app-update-progress", fn);
         },
         removeListener(fn) {
-            notionIpc.receiveNotionFromMain.removeListener("notion:app-update-progress", fn);
+            rendererIpc.receiveNotionFromMain.removeListener("notion:app-update-progress", fn);
         },
     },
     appUpdateNotAvailable: {
         addListener(fn) {
-            notionIpc.receiveNotionFromMain.addListener("notion:app-update-not-available", fn);
+            rendererIpc.receiveNotionFromMain.addListener("notion:app-update-not-available", fn);
         },
         removeListener(fn) {
-            notionIpc.receiveNotionFromMain.removeListener("notion:app-update-not-available", fn);
+            rendererIpc.receiveNotionFromMain.removeListener("notion:app-update-not-available", fn);
         },
     },
     appUpdateFinished: {
         addListener(fn) {
-            notionIpc.receiveNotionFromMain.addListener("notion:app-update-finished", fn);
+            rendererIpc.receiveNotionFromMain.addListener("notion:app-update-finished", fn);
         },
         removeListener(fn) {
-            notionIpc.receiveNotionFromMain.removeListener("notion:app-update-finished", fn);
+            rendererIpc.receiveNotionFromMain.removeListener("notion:app-update-finished", fn);
         },
     },
     appUpdateInstall: {
         addListener(fn) {
-            notionIpc.receiveNotionFromMain.addListener("notion:app-update-install", fn);
+            rendererIpc.receiveNotionFromMain.addListener("notion:app-update-install", fn);
         },
         removeListener(fn) {
-            notionIpc.receiveNotionFromMain.removeListener("notion:app-update-install", fn);
-        },
-    },
-    windowsBackgrounded: {
-        addListener(fn) {
-            notionIpc.receiveNotionFromMain.addListener("notion:windows-backgrounded", fn);
-        },
-        removeListener(fn) {
-            notionIpc.receiveNotionFromMain.removeListener("notion:windows-backgrounded", fn);
+            rendererIpc.receiveNotionFromMain.removeListener("notion:app-update-install", fn);
         },
     },
     getSubstitutions() {
-        return ((electron_1.default.remote.systemPreferences.getUserDefault &&
-            electron_1.default.remote.systemPreferences.getUserDefault("NSUserDictionaryReplacementItems", "array")) ||
+        return ((remote.systemPreferences.getUserDefault &&
+            remote.systemPreferences.getUserDefault("NSUserDictionaryReplacementItems", "array")) ||
             []);
     },
     isMainWindow() {
-        const currentWindow = electron_1.default.remote.getCurrentWindow();
-        const focusedWindow = electron_1.default.remote.BrowserWindow.getFocusedWindow();
+        const currentWindow = remote.getCurrentWindow();
+        const focusedWindow = remote.BrowserWindow.getFocusedWindow();
         if (focusedWindow && focusedWindow.isVisible()) {
             return focusedWindow.id === currentWindow.id;
         }
-        const firstWindow = electron_1.default.remote.BrowserWindow.getAllWindows().filter(window => window.isVisible())[0];
+        const firstWindow = remote.BrowserWindow.getAllWindows().filter(window => window.isVisible())[0];
         return firstWindow && firstWindow.id === currentWindow.id;
     },
     windowIsVisible() {
-        const currentWindow = electron_1.default.remote.getCurrentWindow();
+        const currentWindow = remote.getCurrentWindow();
         return currentWindow.isVisible();
     },
     setTheme(theme) {
-        notionIpc.sendNotionToIndex("search:set-theme", theme);
+        rendererIpc.sendNotionToIndex("search:set-theme", theme);
     },
     newWindow: {
         addListener: fn => {
-            electron_1.default.remote.getCurrentWebContents().addListener("new-window", fn);
+            remote.getCurrentWebContents().addListener("new-window", fn);
         },
         removeListener: fn => {
-            electron_1.default.remote.getCurrentWebContents().removeListener("new-window", fn);
+            remote.getCurrentWebContents().removeListener("new-window", fn);
         },
     },
     openOauthPopup: async (args) => {
-        notionIpc.sendToMainListeners("notion:create-popup", args);
+        rendererIpc.sendToMainListeners("notion:create-popup", args);
         return new Promise(resolve => {
             const handlePopupCallback = (sender, url) => {
-                notionIpc.receiveNotionFromMain.removeListener("notion:popup-callback", handlePopupCallback);
+                rendererIpc.receiveNotionFromMain.removeListener("notion:popup-callback", handlePopupCallback);
                 resolve(url);
             };
-            notionIpc.receiveNotionFromMain.addListener("notion:popup-callback", handlePopupCallback);
+            rendererIpc.receiveNotionFromMain.addListener("notion:popup-callback", handlePopupCallback);
         });
     },
     openGoogleDrivePickerPopup: async (args) => {
-        notionIpc.sendToMainListeners("notion:create-google-drive-picker", args);
+        rendererIpc.sendToMainListeners("notion:create-google-drive-picker", args);
         return new Promise(resolve => {
             const handlePopupCallback = (sender, file) => {
-                notionIpc.receiveNotionFromMain.removeListener("notion:google-drive-picker-callback", handlePopupCallback);
+                rendererIpc.receiveNotionFromMain.removeListener("notion:google-drive-picker-callback", handlePopupCallback);
                 resolve(file);
             };
-            notionIpc.receiveNotionFromMain.addListener("notion:google-drive-picker-callback", handlePopupCallback);
+            rendererIpc.receiveNotionFromMain.addListener("notion:google-drive-picker-callback", handlePopupCallback);
         });
     },
     getCookie: (cookieName) => {
-        return notionIpc.invokeMainHandler("notion:get-cookie", cookieName);
+        return rendererIpc.invokeMainHandler("notion:get-cookie", cookieName);
     },
     setCookie: (args) => {
-        notionIpc.sendToMainListeners("notion:set-cookie", args);
+        rendererIpc.sendToMainListeners("notion:set-cookie", args);
     },
     setLogglyData: data => {
-        notionIpc.sendToMainListeners("notion:set-loggly-data", data);
+        rendererIpc.sendToMainListeners("notion:set-loggly-data", data);
     },
     clearCookies: () => {
-        notionIpc.sendToMainListeners("notion:clear-cookies");
+        rendererIpc.sendToMainListeners("notion:clear-cookies");
     },
     resetAppCache() {
-        notionIpc.sendToMainListeners("notion:reset-app-cache");
+        rendererIpc.sendToMainListeners("notion:reset-app-cache");
     },
     appUpdateReload: {
         emit: info => {
-            notionIpc.broadcast.emit("notion:app-update-reload", info);
+            rendererIpc.broadcast.emit("notion:app-update-reload", info);
         },
         addListener(fn) {
-            notionIpc.broadcast.addListener("notion:app-update-reload", fn);
+            rendererIpc.broadcast.addListener("notion:app-update-reload", fn);
         },
         removeListener(fn) {
-            notionIpc.broadcast.removeListener("notion:app-update-reload", fn);
+            rendererIpc.broadcast.removeListener("notion:app-update-reload", fn);
         },
     },
     getAppPath() {
-        return electron_1.default.remote.app.getAppPath();
+        return remote.app.getAppPath();
     },
     clearAllCookies: () => {
-        notionIpc.sendToMainListeners("notion:clear-all-cookies");
+        rendererIpc.sendToMainListeners("notion:clear-all-cookies");
     },
     downloadUrl(url) {
-        electron_1.default.remote.getCurrentWebContents().downloadURL(url);
+        remote.getCurrentWebContents().downloadURL(url);
     },
     onNavigate: {
         addListener(fn) {
-            notionIpc.receiveNotionFromMain.addListener("notion:navigate-to-url", fn);
+            rendererIpc.receiveNotionFromMain.addListener("notion:navigate-to-url", fn);
         },
         removeListener(fn) {
-            notionIpc.receiveNotionFromMain.removeListener("notion:navigate-to-url", fn);
+            rendererIpc.receiveNotionFromMain.removeListener("notion:navigate-to-url", fn);
+        },
+    },
+    onOpenSettings: {
+        addListener(fn) {
+            rendererIpc.receiveNotionFromMain.addListener("notion:open-settings", fn);
+        },
+        removeListener(fn) {
+            rendererIpc.receiveNotionFromMain.removeListener("notion:open-settings", fn);
         },
     },
     getSqliteMeta: () => {
-        return notionIpc.invokeMainHandler("notion:get-sqlite-meta");
+        return rendererIpc.invokeMainHandler("notion:get-sqlite-meta");
     },
     refreshAll: includeFocusedWindow => {
-        return notionIpc.invokeMainHandler("notion:refresh-all", includeFocusedWindow);
+        return rendererIpc.invokeMainHandler("notion:refresh-all", includeFocusedWindow);
     },
     ready() {
-        const currentWindow = electron_1.default.remote.getCurrentWindow();
-        return notionIpc.invokeMainHandler("notion:ready", currentWindow.id);
+        const currentWindow = remote.getCurrentWindow();
+        return rendererIpc.invokeMainHandler("notion:ready", currentWindow.id);
     },
     sqliteServerEnabled: true,
 };
 window["__electronApi"] = electronApi;
 window["__isElectron"] = true;
 window["__platform"] = process_1.default.platform;
-//# sourceMappingURL=preload.js.map
 
 // Mizari fait des bêtises :D
 
