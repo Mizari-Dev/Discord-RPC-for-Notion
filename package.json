@@ -1,10 +1,11 @@
 {
   "name": "Notion",
-  "version": "2.0.23",
-  "main": "./main/main.js",
-  "author": "Notion Labs, Incorporated",
-  "description": "Notion desktop application",
+  "author": "Notion Labs, Inc",
+  "version": "2.0.27",
+  "private": true,
+  "description": "Notion",
   "dependencies": {
+    "@electron/remote": "2.0.8",
     "@sentry/electron": "2.5.4",
     "better-sqlite3": "git://github.com/makenotion/better-sqlite3.git#0d1ffa139d76625ab99d856bb3adc0c920ce609f",
     "bufferutil": "4.0.3",
@@ -17,6 +18,7 @@
     "fs-extra": "8.1.0",
     "get-port": "5.1.1",
     "isomorphic-fetch": "2.2.1",
+    "linkifyjs": "3.0.1",
     "lodash": "4.17.15",
     "md5": "2.3.0",
     "notion-intl": "file:shared/notion-intl",
@@ -25,8 +27,10 @@
     "react-dom": "16.10.2",
     "react-intl": "3.11.0",
     "url": "0.11.0",
+    "uuid": "3.1.0",
     "ws": "7.4.1"
   },
+  "main": "./main/main.js",
   "files": [
     "*.js",
     "*.html"
