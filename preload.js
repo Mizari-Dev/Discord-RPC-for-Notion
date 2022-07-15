@@ -24,7 +24,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const process_1 = __importDefault(require("process"));
 const electron_1 = __importDefault(require("electron"));
-const remote = __importStar(require("@electron/remote"));
 const rendererIpc = __importStar(require("./renderIpc"));
 const urlHelpers = __importStar(require("../shared/urlHelpers"));
 const electronApi = {
@@ -38,18 +37,18 @@ const electronApi = {
         }
     },
     clearBrowserHistory() {
-        remote.getCurrentWebContents().clearHistory();
+        electron_1.default.remote.getCurrentWebContents().clearHistory();
     },
     getAppVersion() {
-        return remote.app.getVersion();
+        return electron_1.default.remote.app.getVersion();
     },
     setBadge(str) {
-        const dock = remote.app.dock;
+        const dock = electron_1.default.remote.app.dock;
         if (dock) {
             dock.setBadge(str);
             return;
         }
-        const win = remote.getCurrentWindow();
+        const win = electron_1.default.remote.getCurrentWindow();
         if (win.setOverlayIcon) {
             if (str === "") {
                 win.setOverlayIcon(null, "");
@@ -74,10 +73,10 @@ const electronApi = {
             ctx.fillStyle = "white";
             ctx.textAlign = "center";
             ctx.fillText(str, centerX, centerY + 3.5 * scale * window.devicePixelRatio);
-            const pngData = remote.nativeImage
+            const pngData = electron_1.default.remote.nativeImage
                 .createFromDataURL(canvas.toDataURL("image/png"))
                 .toPNG();
-            const img = remote.nativeImage.createFromBuffer(pngData, {
+            const img = electron_1.default.remote.nativeImage.createFromBuffer(pngData, {
                 scaleFactor: window.devicePixelRatio,
             });
             win.setOverlayIcon(img, `${str} unread notifications`);
@@ -85,15 +84,15 @@ const electronApi = {
     },
     windowFocus: {
         addListener(fn) {
-            remote.app.addListener("browser-window-focus", fn);
+            electron_1.default.remote.app.addListener("browser-window-focus", fn);
         },
         removeListener(fn) {
-            remote.app.removeListener("browser-window-focus", fn);
+            electron_1.default.remote.app.removeListener("browser-window-focus", fn);
         },
     },
     fullscreen: {
         get() {
-            const window = remote.getCurrentWindow();
+            const window = electron_1.default.remote.getCurrentWindow();
             return window && window.isFullScreen();
         },
         addListener(fn) {
@@ -149,31 +148,31 @@ const electronApi = {
         }
     },
     setSpellCheckerLanguages: languages => {
-        const session = remote.getCurrentWebContents().session;
+        const session = electron_1.default.remote.getCurrentWebContents().session;
         session.setSpellCheckerLanguages(languages.filter(language => session.availableSpellCheckerLanguages.includes(language)));
     },
     contextMenu: {
         addListener: fn => {
-            remote.getCurrentWebContents().addListener("context-menu", fn);
+            electron_1.default.remote.getCurrentWebContents().addListener("context-menu", fn);
         },
         removeListener: fn => {
-            remote.getCurrentWebContents().removeListener("context-menu", fn);
+            electron_1.default.remote.getCurrentWebContents().removeListener("context-menu", fn);
         },
     },
     replaceMisspelling: (word) => {
-        remote.getCurrentWebContents().replaceMisspelling(word);
+        electron_1.default.remote.getCurrentWebContents().replaceMisspelling(word);
     },
     cut: () => {
-        remote.getCurrentWebContents().cut();
+        electron_1.default.remote.getCurrentWebContents().cut();
     },
     copy: () => {
-        remote.getCurrentWebContents().copy();
+        electron_1.default.remote.getCurrentWebContents().copy();
     },
     paste: () => {
-        remote.getCurrentWebContents().paste();
+        electron_1.default.remote.getCurrentWebContents().paste();
     },
     inspectElement: (x, y) => {
-        remote.getCurrentWebContents().inspectElement(x, y);
+        electron_1.default.remote.getCurrentWebContents().inspectElement(x, y);
     },
     copyText: (text) => {
         electron_1.default.clipboard.writeText(text);
@@ -195,16 +194,16 @@ const electronApi = {
         img.src = src;
     },
     openDevTools: () => {
-        remote.getCurrentWebContents().openDevTools();
+        electron_1.default.remote.getCurrentWebContents().openDevTools();
     },
     setWindowTitle: title => {
-        const browserWindow = remote.getCurrentWindow();
+        const browserWindow = electron_1.default.remote.getCurrentWindow();
         if (browserWindow.getTitle() !== title) {
             browserWindow.setTitle(title);
         }
     },
     toggleMaximized: () => {
-        const win = remote.getCurrentWindow();
+        const win = electron_1.default.remote.getCurrentWindow();
         if (win.isMaximized()) {
             win.unmaximize();
         }
@@ -334,21 +333,21 @@ const electronApi = {
         },
     },
     getSubstitutions() {
-        return ((remote.systemPreferences.getUserDefault &&
-            remote.systemPreferences.getUserDefault("NSUserDictionaryReplacementItems", "array")) ||
+        return ((electron_1.default.remote.systemPreferences.getUserDefault &&
+            electron_1.default.remote.systemPreferences.getUserDefault("NSUserDictionaryReplacementItems", "array")) ||
             []);
     },
     isMainWindow() {
-        const currentWindow = remote.getCurrentWindow();
-        const focusedWindow = remote.BrowserWindow.getFocusedWindow();
+        const currentWindow = electron_1.default.remote.getCurrentWindow();
+        const focusedWindow = electron_1.default.remote.BrowserWindow.getFocusedWindow();
         if (focusedWindow && focusedWindow.isVisible()) {
             return focusedWindow.id === currentWindow.id;
         }
-        const firstWindow = remote.BrowserWindow.getAllWindows().filter(window => window.isVisible())[0];
+        const firstWindow = electron_1.default.remote.BrowserWindow.getAllWindows().filter(window => window.isVisible())[0];
         return firstWindow && firstWindow.id === currentWindow.id;
     },
     windowIsVisible() {
-        const currentWindow = remote.getCurrentWindow();
+        const currentWindow = electron_1.default.remote.getCurrentWindow();
         return currentWindow.isVisible();
     },
     setTheme(theme) {
@@ -356,10 +355,10 @@ const electronApi = {
     },
     newWindow: {
         addListener: fn => {
-            remote.getCurrentWebContents().addListener("new-window", fn);
+            electron_1.default.remote.getCurrentWebContents().addListener("new-window", fn);
         },
         removeListener: fn => {
-            remote.getCurrentWebContents().removeListener("new-window", fn);
+            electron_1.default.remote.getCurrentWebContents().removeListener("new-window", fn);
         },
     },
     openOauthPopup: async (args) => {
@@ -409,13 +408,13 @@ const electronApi = {
         },
     },
     getAppPath() {
-        return remote.app.getAppPath();
+        return electron_1.default.remote.app.getAppPath();
     },
     clearAllCookies: () => {
         rendererIpc.sendToMainListeners("notion:clear-all-cookies");
     },
     downloadUrl(url) {
-        remote.getCurrentWebContents().downloadURL(url);
+        electron_1.default.remote.getCurrentWebContents().downloadURL(url);
     },
     onNavigate: {
         addListener(fn) {
@@ -440,7 +439,7 @@ const electronApi = {
         return rendererIpc.invokeMainHandler("notion:refresh-all", includeFocusedWindow);
     },
     ready() {
-        const currentWindow = remote.getCurrentWindow();
+        const currentWindow = electron_1.default.remote.getCurrentWindow();
         return rendererIpc.invokeMainHandler("notion:ready", currentWindow.id);
     },
     sqliteServerEnabled: true,
