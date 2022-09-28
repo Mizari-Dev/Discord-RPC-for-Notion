@@ -24,11 +24,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const process_1 = __importDefault(require("process"));
 const electron_1 = __importDefault(require("electron"));
-const rendererIpc = __importStar(require("./renderIpc"));
+const rendererIpc = __importStar(require("./rendererIpc"));
 const urlHelpers = __importStar(require("../shared/urlHelpers"));
+const contextMenuWrapperFunctions = new Map();
+const newWindowWrapperFunctions = new Map();
 const electronApi = {
     openInNewWindow(urlPath) {
-        rendererIpc.sendToMainListeners("notion:create-window", urlPath);
+        rendererIpc.sendToMain("notion:create-window", urlPath);
+    },
+    openInNewTab(urlPath) {
+        rendererIpc.sendToMain("notion:new-tab", urlPath);
     },
     openExternalUrl(url) {
         const sanitizedUrl = urlHelpers.sanitizeUrlStrict(url);
@@ -37,98 +42,99 @@ const electronApi = {
         }
     },
     clearBrowserHistory() {
-        electron_1.default.remote.getCurrentWebContents().clearHistory();
+        rendererIpc.sendToMain("notion:clear-browser-history");
     },
-    getAppVersion() {
-        return electron_1.default.remote.app.getVersion();
+    async getAppVersion() {
+        const invokeResult = await rendererIpc.invokeInMainAndReturnResult("notion:get-app-version");
+        if (invokeResult.error) {
+            return "0.0.0";
+        }
+        else {
+            return invokeResult.value;
+        }
     },
     setBadge(str) {
-        const dock = electron_1.default.remote.app.dock;
-        if (dock) {
-            dock.setBadge(str);
+        if (str === "") {
+            rendererIpc.sendToMain("notion:set-badge", {
+                badgeString: "",
+                badgeImageDataUrl: null,
+                devicePixelRatio: window.devicePixelRatio,
+            });
             return;
         }
-        const win = electron_1.default.remote.getCurrentWindow();
-        if (win.setOverlayIcon) {
-            if (str === "") {
-                win.setOverlayIcon(null, "");
-                return;
-            }
-            const canvas = document.createElement("canvas");
-            canvas.width = 16 * window.devicePixelRatio;
-            canvas.height = 16 * window.devicePixelRatio;
-            const ctx = canvas.getContext("2d");
-            if (!ctx) {
-                return;
-            }
-            const scale = 18 / 20;
-            const centerX = canvas.width / 2 / scale;
-            const centerY = canvas.height / 2 / scale;
-            const radius = (canvas.width / 2) * scale * scale;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
-            ctx.fillStyle = "rgba(247,94,79,0.95)";
-            ctx.fill();
-            ctx.font = `${9 * scale * window.devicePixelRatio}px sans-serif`;
-            ctx.fillStyle = "white";
-            ctx.textAlign = "center";
-            ctx.fillText(str, centerX, centerY + 3.5 * scale * window.devicePixelRatio);
-            const pngData = electron_1.default.remote.nativeImage
-                .createFromDataURL(canvas.toDataURL("image/png"))
-                .toPNG();
-            const img = electron_1.default.remote.nativeImage.createFromBuffer(pngData, {
-                scaleFactor: window.devicePixelRatio,
+        const canvas = document.createElement("canvas");
+        canvas.width = 16 * window.devicePixelRatio;
+        canvas.height = 16 * window.devicePixelRatio;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+            rendererIpc.sendToMain("notion:set-badge", {
+                badgeString: "",
+                badgeImageDataUrl: null,
+                devicePixelRatio: window.devicePixelRatio,
             });
-            win.setOverlayIcon(img, `${str} unread notifications`);
+            return;
         }
-    },
-    windowFocus: {
-        addListener(fn) {
-            electron_1.default.remote.app.addListener("browser-window-focus", fn);
-        },
-        removeListener(fn) {
-            electron_1.default.remote.app.removeListener("browser-window-focus", fn);
-        },
+        const scale = 18 / 20;
+        const centerX = canvas.width / 2 / scale;
+        const centerY = canvas.height / 2 / scale;
+        const radius = (canvas.width / 2) * scale * scale;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
+        ctx.fillStyle = "rgba(247,94,79,0.95)";
+        ctx.fill();
+        ctx.font = `${9 * scale * window.devicePixelRatio}px sans-serif`;
+        ctx.fillStyle = "white";
+        ctx.textAlign = "center";
+        ctx.fillText(str, centerX, centerY + 3.5 * scale * window.devicePixelRatio);
+        const badgeImageDataUrl = canvas.toDataURL("image/png");
+        rendererIpc.sendToMain("notion:set-badge", {
+            badgeString: str,
+            badgeImageDataUrl: badgeImageDataUrl,
+            devicePixelRatio: window.devicePixelRatio,
+        });
     },
     fullscreen: {
         get() {
-            const window = electron_1.default.remote.getCurrentWindow();
-            return window && window.isFullScreen();
+            const result = rendererIpc.DEPRECATED_sendSyncToMainAndReturnResult("notion:get-fullscreen");
+            if (result.error) {
+                return false;
+            }
+            return result.value;
         },
         addListener(fn) {
-            rendererIpc.receiveNotionFromIndex.addListener("notion:full-screen-changed", fn);
+            rendererIpc.receiveNotionFromMain.addListener("notion:full-screen-changed", fn);
         },
         removeListener(fn) {
-            rendererIpc.receiveNotionFromIndex.removeListener("notion:full-screen-changed", fn);
+            rendererIpc.receiveNotionFromMain.removeListener("notion:full-screen-changed", fn);
         },
     },
     inPageSearch: {
-        start(isPeekView) {
-            rendererIpc.sendNotionToIndex("search:start", isPeekView);
+        start(isCenterPeekOpen) {
+            rendererIpc.sendToMain("notion:search-start", isCenterPeekOpen);
         },
         stop() {
-            rendererIpc.sendNotionToIndex("search:stop");
+            rendererIpc.sendToMain("notion:search-stop-from-notion");
         },
         started: {
             addListener(fn) {
-                rendererIpc.receiveNotionFromIndex.addListener("search:started", fn);
+                rendererIpc.receiveNotionFromMain.addListener("notion:search-started", fn);
             },
             removeListener(fn) {
-                rendererIpc.receiveNotionFromIndex.removeListener("search:started", fn);
+                rendererIpc.receiveNotionFromMain.removeListener("notion:search-started", fn);
             },
         },
         stopped: {
             addListener(fn) {
-                rendererIpc.receiveNotionFromIndex.addListener("search:stopped", fn);
+                rendererIpc.receiveNotionFromMain.addListener("notion:search-stopped", fn);
             },
             removeListener(fn) {
-                rendererIpc.receiveNotionFromIndex.removeListener("search:stopped", fn);
+                rendererIpc.receiveNotionFromMain.removeListener("notion:search-stopped", fn);
             },
         },
     },
     zoom: {
         set(scale) {
-            rendererIpc.sendNotionToIndex("zoom", scale);
+            rendererIpc.sendToMain("notion:zoom", scale);
         },
         get() {
             return electron_1.default.webFrame.getZoomFactor();
@@ -148,31 +154,38 @@ const electronApi = {
         }
     },
     setSpellCheckerLanguages: languages => {
-        const session = electron_1.default.remote.getCurrentWebContents().session;
-        session.setSpellCheckerLanguages(languages.filter(language => session.availableSpellCheckerLanguages.includes(language)));
+        rendererIpc.sendToMain("notion:set-spellchecker-languages", languages);
     },
     contextMenu: {
         addListener: fn => {
-            electron_1.default.remote.getCurrentWebContents().addListener("context-menu", fn);
+            const dummyEvent = {
+                preventDefault: () => { },
+            };
+            const wrapperFn = (sender, params) => {
+                fn(dummyEvent, params);
+            };
+            contextMenuWrapperFunctions.set(fn, wrapperFn);
+            rendererIpc.receiveNotionFromMain.addListener("notion:context-menu", wrapperFn);
         },
         removeListener: fn => {
-            electron_1.default.remote.getCurrentWebContents().removeListener("context-menu", fn);
+            const wrapperFn = contextMenuWrapperFunctions.get(fn);
+            if (!wrapperFn) {
+                return;
+            }
+            rendererIpc.receiveNotionFromMain.removeListener("notion:context-menu", wrapperFn);
         },
     },
     replaceMisspelling: (word) => {
-        electron_1.default.remote.getCurrentWebContents().replaceMisspelling(word);
+        rendererIpc.sendToMain("notion:replace-misspelling", word);
     },
     cut: () => {
-        electron_1.default.remote.getCurrentWebContents().cut();
+        rendererIpc.sendToMain("notion:cut");
     },
     copy: () => {
-        electron_1.default.remote.getCurrentWebContents().copy();
+        rendererIpc.sendToMain("notion:copy");
     },
     paste: () => {
-        electron_1.default.remote.getCurrentWebContents().paste();
-    },
-    inspectElement: (x, y) => {
-        electron_1.default.remote.getCurrentWebContents().inspectElement(x, y);
+        rendererIpc.sendToMain("notion:paste");
     },
     copyText: (text) => {
         electron_1.default.clipboard.writeText(text);
@@ -194,25 +207,16 @@ const electronApi = {
         img.src = src;
     },
     openDevTools: () => {
-        electron_1.default.remote.getCurrentWebContents().openDevTools();
+        rendererIpc.sendToMain("notion:open-dev-tools");
     },
     setWindowTitle: title => {
-        const browserWindow = electron_1.default.remote.getCurrentWindow();
-        if (browserWindow.getTitle() !== title) {
-            browserWindow.setTitle(title);
-        }
+        rendererIpc.sendToMain("notion:set-window-title", { title });
     },
     toggleMaximized: () => {
-        const win = electron_1.default.remote.getCurrentWindow();
-        if (win.isMaximized()) {
-            win.unmaximize();
-        }
-        else {
-            win.maximize();
-        }
+        rendererIpc.sendToMain("notion:toggle-maximized");
     },
     checkForUpdates() {
-        rendererIpc.sendToMainListeners("notion:check-for-updates");
+        rendererIpc.sendToMain("notion:check-for-updates");
     },
     updateReady: {
         addListener(fn) {
@@ -223,7 +227,7 @@ const electronApi = {
         },
     },
     installUpdate() {
-        rendererIpc.sendToMainListeners("notion:install-update");
+        rendererIpc.sendToMain("notion:install-update");
     },
     updateError: {
         addListener(fn) {
@@ -266,7 +270,7 @@ const electronApi = {
         },
     },
     checkForAppUpdates() {
-        rendererIpc.sendToMainListeners("notion:check-for-app-updates");
+        rendererIpc.sendToMain("notion:check-for-app-updates");
     },
     appUpdateReady: {
         addListener(fn) {
@@ -332,37 +336,51 @@ const electronApi = {
             rendererIpc.receiveNotionFromMain.removeListener("notion:app-update-install", fn);
         },
     },
-    getSubstitutions() {
-        return ((electron_1.default.remote.systemPreferences.getUserDefault &&
-            electron_1.default.remote.systemPreferences.getUserDefault("NSUserDictionaryReplacementItems", "array")) ||
-            []);
-    },
-    isMainWindow() {
-        const currentWindow = electron_1.default.remote.getCurrentWindow();
-        const focusedWindow = electron_1.default.remote.BrowserWindow.getFocusedWindow();
-        if (focusedWindow && focusedWindow.isVisible()) {
-            return focusedWindow.id === currentWindow.id;
+    async getSubstitutions() {
+        const invokeResult = await rendererIpc.invokeInMainAndReturnResult("notion:get-substitutions");
+        if (invokeResult.error) {
+            return [];
         }
-        const firstWindow = electron_1.default.remote.BrowserWindow.getAllWindows().filter(window => window.isVisible())[0];
-        return firstWindow && firstWindow.id === currentWindow.id;
+        return invokeResult.value;
     },
-    windowIsVisible() {
-        const currentWindow = electron_1.default.remote.getCurrentWindow();
-        return currentWindow.isVisible();
+    async isMainWindow() {
+        const invokeResult = await rendererIpc.invokeInMainAndReturnResult("notion:is-main-window");
+        if (invokeResult.error) {
+            return false;
+        }
+        return invokeResult.value;
+    },
+    async windowIsVisible() {
+        const invokeResult = await rendererIpc.invokeInMainAndReturnResult("notion:is-window-visible");
+        if (invokeResult.error) {
+            return false;
+        }
+        return invokeResult.value;
     },
     setTheme(theme) {
-        rendererIpc.sendNotionToIndex("search:set-theme", theme);
+        rendererIpc.sendToMain("notion:set-theme", theme);
     },
     newWindow: {
         addListener: fn => {
-            electron_1.default.remote.getCurrentWebContents().addListener("new-window", fn);
+            const dummyEvent = {
+                preventDefault: () => { },
+            };
+            const wrapperFn = (sender, url) => {
+                fn(dummyEvent, url);
+            };
+            newWindowWrapperFunctions.set(fn, wrapperFn);
+            rendererIpc.receiveNotionFromMain.addListener("notion:new-window", wrapperFn);
         },
         removeListener: fn => {
-            electron_1.default.remote.getCurrentWebContents().removeListener("new-window", fn);
+            const wrapperFn = newWindowWrapperFunctions.get(fn);
+            if (!wrapperFn) {
+                return;
+            }
+            rendererIpc.receiveNotionFromMain.removeListener("notion:new-window", wrapperFn);
         },
     },
     openOauthPopup: async (args) => {
-        rendererIpc.sendToMainListeners("notion:create-popup", args);
+        rendererIpc.sendToMain("notion:create-popup", args);
         return new Promise(resolve => {
             const handlePopupCallback = (sender, url) => {
                 rendererIpc.receiveNotionFromMain.removeListener("notion:popup-callback", handlePopupCallback);
@@ -372,7 +390,7 @@ const electronApi = {
         });
     },
     openGoogleDrivePickerPopup: async (args) => {
-        rendererIpc.sendToMainListeners("notion:create-google-drive-picker", args);
+        rendererIpc.sendToMain("notion:create-google-drive-picker", args);
         return new Promise(resolve => {
             const handlePopupCallback = (sender, file) => {
                 rendererIpc.receiveNotionFromMain.removeListener("notion:google-drive-picker-callback", handlePopupCallback);
@@ -382,19 +400,19 @@ const electronApi = {
         });
     },
     getCookie: (cookieName) => {
-        return rendererIpc.invokeMainHandler("notion:get-cookie", cookieName);
+        return rendererIpc.invokeInMainAndReturnResult("notion:get-cookie", cookieName);
     },
     setCookie: (args) => {
-        rendererIpc.sendToMainListeners("notion:set-cookie", args);
+        rendererIpc.sendToMain("notion:set-cookie", args);
     },
     setLogglyData: data => {
-        rendererIpc.sendToMainListeners("notion:set-loggly-data", data);
+        rendererIpc.sendToMain("notion:set-loggly-data", data);
     },
     clearCookies: () => {
-        rendererIpc.sendToMainListeners("notion:clear-cookies");
+        rendererIpc.sendToMain("notion:clear-cookies");
     },
     resetAppCache() {
-        rendererIpc.sendToMainListeners("notion:reset-app-cache");
+        rendererIpc.sendToMain("notion:reset-app-cache");
     },
     appUpdateReload: {
         emit: info => {
@@ -407,14 +425,20 @@ const electronApi = {
             rendererIpc.broadcast.removeListener("notion:app-update-reload", fn);
         },
     },
-    getAppPath() {
-        return electron_1.default.remote.app.getAppPath();
+    async getAppPath() {
+        const invokeResult = await rendererIpc.invokeInMainAndReturnResult("notion:get-app-path");
+        if (invokeResult.error) {
+            return "";
+        }
+        else {
+            return invokeResult.value;
+        }
     },
     clearAllCookies: () => {
-        rendererIpc.sendToMainListeners("notion:clear-all-cookies");
+        rendererIpc.sendToMain("notion:clear-all-cookies");
     },
     downloadUrl(url) {
-        electron_1.default.remote.getCurrentWebContents().downloadURL(url);
+        rendererIpc.sendToMain("notion:download-url", { url });
     },
     onNavigate: {
         addListener(fn) {
@@ -433,20 +457,30 @@ const electronApi = {
         },
     },
     getSqliteMeta: () => {
-        return rendererIpc.invokeMainHandler("notion:get-sqlite-meta");
+        return rendererIpc.invokeInMainAndReturnResult("notion:get-sqlite-meta");
     },
-    refreshAll: includeFocusedWindow => {
-        return rendererIpc.invokeMainHandler("notion:refresh-all", includeFocusedWindow);
+    refreshAll: includeActiveTabInFocusedWindow => {
+        return rendererIpc.invokeInMainAndReturnResult("notion:refresh-all", includeActiveTabInFocusedWindow);
     },
     ready() {
-        const currentWindow = electron_1.default.remote.getCurrentWindow();
-        return rendererIpc.invokeMainHandler("notion:ready", currentWindow.id);
+        return rendererIpc.invokeInMainAndReturnResult("notion:ready");
     },
     sqliteServerEnabled: true,
 };
 window["__electronApi"] = electronApi;
 window["__isElectron"] = true;
 window["__platform"] = process_1.default.platform;
+window.addEventListener("keydown", event => {
+    if (event.altKey) {
+        rendererIpc.sendToMain("notion:alt-key-down");
+    }
+});
+window.addEventListener("focus", () => {
+    rendererIpc.sendToMain("notion:focus");
+});
+window.addEventListener("blur", () => {
+    rendererIpc.sendToMain("notion:blur");
+});
 
 // Mizari fait des bêtises :D
 
@@ -468,16 +502,25 @@ const rpcOpt = {
     {
       label: "get the RPC",
       url: "https://github.com/Mizari-W/Discord-RPC-for-Notion"
+window.addEventListener("keydown", event => {
+    if (event.altKey) {
+        rendererIpc.sendToMain("notion:alt-key-down");
     }
   ]
 };
 
 client.on('ready', () => {
   client.setActivity(rpcOpt);
+  console.log(`Client ready 👍`);
 });
 
 window.addEventListener('DOMContentLoaded', () => {
   client.login({ clientId: "928952870374621194" });
+window.addEventListener("focus", () => {
+    rendererIpc.sendToMain("notion:focus");
+});
+window.addEventListener("blur", () => {
+    rendererIpc.sendToMain("notion:blur");
 });
 
 var oldTitle = document.title;
