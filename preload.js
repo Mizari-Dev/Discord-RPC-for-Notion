@@ -502,9 +502,6 @@ const rpcOpt = {
     {
       label: "get the RPC",
       url: "https://github.com/Mizari-W/Discord-RPC-for-Notion"
-window.addEventListener("keydown", event => {
-    if (event.altKey) {
-        rendererIpc.sendToMain("notion:alt-key-down");
     }
   ]
 };
@@ -516,11 +513,6 @@ client.on('ready', () => {
 
 window.addEventListener('DOMContentLoaded', () => {
   client.login({ clientId: "928952870374621194" });
-window.addEventListener("focus", () => {
-    rendererIpc.sendToMain("notion:focus");
-});
-window.addEventListener("blur", () => {
-    rendererIpc.sendToMain("notion:blur");
 });
 
 var oldTitle = document.title;
