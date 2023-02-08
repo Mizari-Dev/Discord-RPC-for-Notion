@@ -25,21 +25,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const process_1 = __importDefault(require("process"));
 const electron_1 = __importDefault(require("electron"));
 const rendererIpc = __importStar(require("./rendererIpc"));
-const urlHelpers = __importStar(require("../shared/urlHelpers"));
 const contextMenuWrapperFunctions = new Map();
 const newWindowWrapperFunctions = new Map();
 const electronApi = {
     openInNewWindow(urlPath) {
         rendererIpc.sendToMain("notion:create-window", urlPath);
     },
-    openInNewTab(urlPath) {
-        rendererIpc.sendToMain("notion:new-tab", urlPath);
+    openInNewTab(urlPath, makeTabActive, position) {
+        rendererIpc.sendToMain("notion:new-tab-from-notion", urlPath, Boolean(makeTabActive), position || "after-children");
     },
     openExternalUrl(url) {
-        const sanitizedUrl = urlHelpers.sanitizeUrlStrict(url);
-        if (sanitizedUrl) {
-            void electron_1.default.shell.openExternal(url);
-        }
+        rendererIpc.sendToMain("notion:open-external-url", { url });
     },
     clearBrowserHistory() {
         rendererIpc.sendToMain("notion:clear-browser-history");
@@ -102,10 +98,10 @@ const electronApi = {
             return result.value;
         },
         addListener(fn) {
-            rendererIpc.receiveNotionFromMain.addListener("notion:full-screen-changed", fn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:full-screen-changed", fn);
         },
         removeListener(fn) {
-            rendererIpc.receiveNotionFromMain.removeListener("notion:full-screen-changed", fn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:full-screen-changed", fn);
         },
     },
     inPageSearch: {
@@ -117,18 +113,18 @@ const electronApi = {
         },
         started: {
             addListener(fn) {
-                rendererIpc.receiveNotionFromMain.addListener("notion:search-started", fn);
+                rendererIpc.handleMainToNotionEvent.addListener("notion:search-started", fn);
             },
             removeListener(fn) {
-                rendererIpc.receiveNotionFromMain.removeListener("notion:search-started", fn);
+                rendererIpc.handleMainToNotionEvent.removeListener("notion:search-started", fn);
             },
         },
         stopped: {
             addListener(fn) {
-                rendererIpc.receiveNotionFromMain.addListener("notion:search-stopped", fn);
+                rendererIpc.handleMainToNotionEvent.addListener("notion:search-stopped", fn);
             },
             removeListener(fn) {
-                rendererIpc.receiveNotionFromMain.removeListener("notion:search-stopped", fn);
+                rendererIpc.handleMainToNotionEvent.removeListener("notion:search-stopped", fn);
             },
         },
     },
@@ -165,14 +161,14 @@ const electronApi = {
                 fn(dummyEvent, params);
             };
             contextMenuWrapperFunctions.set(fn, wrapperFn);
-            rendererIpc.receiveNotionFromMain.addListener("notion:context-menu", wrapperFn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:context-menu", wrapperFn);
         },
         removeListener: fn => {
             const wrapperFn = contextMenuWrapperFunctions.get(fn);
             if (!wrapperFn) {
                 return;
             }
-            rendererIpc.receiveNotionFromMain.removeListener("notion:context-menu", wrapperFn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:context-menu", wrapperFn);
         },
     },
     replaceMisspelling: (word) => {
@@ -220,10 +216,10 @@ const electronApi = {
     },
     updateReady: {
         addListener(fn) {
-            rendererIpc.receiveNotionFromMain.addListener("notion:update-ready", fn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:update-ready", fn);
         },
         removeListener(fn) {
-            rendererIpc.receiveNotionFromMain.removeListener("notion:update-ready", fn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:update-ready", fn);
         },
     },
     installUpdate() {
@@ -231,42 +227,42 @@ const electronApi = {
     },
     updateError: {
         addListener(fn) {
-            rendererIpc.receiveNotionFromMain.addListener("notion:update-error", fn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:update-error", fn);
         },
         removeListener(fn) {
-            rendererIpc.receiveNotionFromMain.removeListener("notion:update-error", fn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:update-error", fn);
         },
     },
     updateChecking: {
         addListener(fn) {
-            rendererIpc.receiveNotionFromMain.addListener("notion:checking-for-update", fn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:checking-for-update", fn);
         },
         removeListener(fn) {
-            rendererIpc.receiveNotionFromMain.removeListener("notion:checking-for-update", fn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:checking-for-update", fn);
         },
     },
     updateAvailable: {
         addListener(fn) {
-            rendererIpc.receiveNotionFromMain.addListener("notion:update-available", fn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:update-available", fn);
         },
         removeListener(fn) {
-            rendererIpc.receiveNotionFromMain.removeListener("notion:update-available", fn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:update-available", fn);
         },
     },
     updateProgress: {
         addListener(fn) {
-            rendererIpc.receiveNotionFromMain.addListener("notion:update-progress", fn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:update-progress", fn);
         },
         removeListener(fn) {
-            rendererIpc.receiveNotionFromMain.removeListener("notion:update-progress", fn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:update-progress", fn);
         },
     },
     updateNotAvailable: {
         addListener(fn) {
-            rendererIpc.receiveNotionFromMain.addListener("notion:update-not-available", fn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:update-not-available", fn);
         },
         removeListener(fn) {
-            rendererIpc.receiveNotionFromMain.removeListener("notion:update-not-available", fn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:update-not-available", fn);
         },
     },
     checkForAppUpdates() {
@@ -274,66 +270,66 @@ const electronApi = {
     },
     appUpdateReady: {
         addListener(fn) {
-            rendererIpc.receiveNotionFromMain.addListener("notion:app-update-ready", fn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:app-update-ready", fn);
         },
         removeListener(fn) {
-            rendererIpc.receiveNotionFromMain.removeListener("notion:app-update-ready", fn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:app-update-ready", fn);
         },
     },
     appUpdateError: {
         addListener(fn) {
-            rendererIpc.receiveNotionFromMain.addListener("notion:app-update-error", fn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:app-update-error", fn);
         },
         removeListener(fn) {
-            rendererIpc.receiveNotionFromMain.removeListener("notion:app-update-error", fn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:app-update-error", fn);
         },
     },
     appUpdateChecking: {
         addListener(fn) {
-            rendererIpc.receiveNotionFromMain.addListener("notion:checking-for-app-update", fn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:checking-for-app-update", fn);
         },
         removeListener(fn) {
-            rendererIpc.receiveNotionFromMain.removeListener("notion:checking-for-app-update", fn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:checking-for-app-update", fn);
         },
     },
     appUpdateAvailable: {
         addListener(fn) {
-            rendererIpc.receiveNotionFromMain.addListener("notion:app-update-available", fn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:app-update-available", fn);
         },
         removeListener(fn) {
-            rendererIpc.receiveNotionFromMain.removeListener("notion:app-update-available", fn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:app-update-available", fn);
         },
     },
     appUpdateProgress: {
         addListener(fn) {
-            rendererIpc.receiveNotionFromMain.addListener("notion:app-update-progress", fn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:app-update-progress", fn);
         },
         removeListener(fn) {
-            rendererIpc.receiveNotionFromMain.removeListener("notion:app-update-progress", fn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:app-update-progress", fn);
         },
     },
     appUpdateNotAvailable: {
         addListener(fn) {
-            rendererIpc.receiveNotionFromMain.addListener("notion:app-update-not-available", fn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:app-update-not-available", fn);
         },
         removeListener(fn) {
-            rendererIpc.receiveNotionFromMain.removeListener("notion:app-update-not-available", fn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:app-update-not-available", fn);
         },
     },
     appUpdateFinished: {
         addListener(fn) {
-            rendererIpc.receiveNotionFromMain.addListener("notion:app-update-finished", fn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:app-update-finished", fn);
         },
         removeListener(fn) {
-            rendererIpc.receiveNotionFromMain.removeListener("notion:app-update-finished", fn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:app-update-finished", fn);
         },
     },
     appUpdateInstall: {
         addListener(fn) {
-            rendererIpc.receiveNotionFromMain.addListener("notion:app-update-install", fn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:app-update-install", fn);
         },
         removeListener(fn) {
-            rendererIpc.receiveNotionFromMain.removeListener("notion:app-update-install", fn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:app-update-install", fn);
         },
     },
     async getSubstitutions() {
@@ -344,11 +340,28 @@ const electronApi = {
         return invokeResult.value;
     },
     async isMainWindow() {
-        const invokeResult = await rendererIpc.invokeInMainAndReturnResult("notion:is-main-window");
+        if (electronApi.isMainTab) {
+            return electronApi.isMainTab();
+        }
+        throw new Error("electronApi.isMainTab should not be undefined since it was added in the same commit");
+    },
+    async isMainTab() {
+        const invokeResult = await rendererIpc.invokeInMainAndReturnResult("notion:is-main-tab");
         if (invokeResult.error) {
             return false;
         }
         return invokeResult.value;
+    },
+    isActiveTab: {
+        get() {
+            return rendererIpc.invokeInMainAndReturnResult("notion:is-active-tab");
+        },
+        addListener(fn) {
+            rendererIpc.handleMainToNotionEvent.addListener("notion:set-is-active-tab", fn);
+        },
+        removeListener(fn) {
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:set-is-active-tab", fn);
+        },
     },
     async windowIsVisible() {
         const invokeResult = await rendererIpc.invokeInMainAndReturnResult("notion:is-window-visible");
@@ -369,34 +382,34 @@ const electronApi = {
                 fn(dummyEvent, url);
             };
             newWindowWrapperFunctions.set(fn, wrapperFn);
-            rendererIpc.receiveNotionFromMain.addListener("notion:new-window", wrapperFn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:new-window", wrapperFn);
         },
         removeListener: fn => {
             const wrapperFn = newWindowWrapperFunctions.get(fn);
             if (!wrapperFn) {
                 return;
             }
-            rendererIpc.receiveNotionFromMain.removeListener("notion:new-window", wrapperFn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:new-window", wrapperFn);
         },
     },
     openOauthPopup: async (args) => {
         rendererIpc.sendToMain("notion:create-popup", args);
         return new Promise(resolve => {
             const handlePopupCallback = (sender, url) => {
-                rendererIpc.receiveNotionFromMain.removeListener("notion:popup-callback", handlePopupCallback);
+                rendererIpc.handleMainToNotionEvent.removeListener("notion:popup-callback", handlePopupCallback);
                 resolve(url);
             };
-            rendererIpc.receiveNotionFromMain.addListener("notion:popup-callback", handlePopupCallback);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:popup-callback", handlePopupCallback);
         });
     },
     openGoogleDrivePickerPopup: async (args) => {
         rendererIpc.sendToMain("notion:create-google-drive-picker", args);
         return new Promise(resolve => {
             const handlePopupCallback = (sender, file) => {
-                rendererIpc.receiveNotionFromMain.removeListener("notion:google-drive-picker-callback", handlePopupCallback);
+                rendererIpc.handleMainToNotionEvent.removeListener("notion:google-drive-picker-callback", handlePopupCallback);
                 resolve(file);
             };
-            rendererIpc.receiveNotionFromMain.addListener("notion:google-drive-picker-callback", handlePopupCallback);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:google-drive-picker-callback", handlePopupCallback);
         });
     },
     getCookie: (cookieName) => {
@@ -410,9 +423,6 @@ const electronApi = {
     },
     clearCookies: () => {
         rendererIpc.sendToMain("notion:clear-cookies");
-    },
-    resetAppCache() {
-        rendererIpc.sendToMain("notion:reset-app-cache");
     },
     appUpdateReload: {
         emit: info => {
@@ -442,18 +452,18 @@ const electronApi = {
     },
     onNavigate: {
         addListener(fn) {
-            rendererIpc.receiveNotionFromMain.addListener("notion:navigate-to-url", fn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:navigate-to-url", fn);
         },
         removeListener(fn) {
-            rendererIpc.receiveNotionFromMain.removeListener("notion:navigate-to-url", fn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:navigate-to-url", fn);
         },
     },
     onOpenSettings: {
         addListener(fn) {
-            rendererIpc.receiveNotionFromMain.addListener("notion:open-settings", fn);
+            rendererIpc.handleMainToNotionEvent.addListener("notion:open-settings", fn);
         },
         removeListener(fn) {
-            rendererIpc.receiveNotionFromMain.removeListener("notion:open-settings", fn);
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:open-settings", fn);
         },
     },
     getSqliteMeta: () => {
@@ -466,6 +476,50 @@ const electronApi = {
         return rendererIpc.invokeInMainAndReturnResult("notion:ready");
     },
     sqliteServerEnabled: true,
+    electronAppFeatures: {
+        get() {
+            return rendererIpc.invokeInMainAndReturnResult("notion:get-electron-app-features");
+        },
+        addListener(fn) {
+            rendererIpc.handleMainToNotionEvent.addListener("notion:set-electron-app-features", fn);
+        },
+        removeListener(fn) {
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:set-electron-app-features", fn);
+        },
+    },
+    sidebarState: {
+        set(state) {
+            rendererIpc.sendToMain("notion:set-sidebar-state", state);
+        },
+        addToggleListener(fn) {
+            rendererIpc.handleMainToNotionEvent.addListener("notion:toggle-sidebar-expanded", fn);
+        },
+        removeToggleListener(fn) {
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:toggle-sidebar-expanded", fn);
+        },
+    },
+    windowSidebarState: {
+        get() {
+            return rendererIpc.invokeInMainAndReturnResult("notion:get-window-sidebar-state");
+        },
+        set(state) {
+            rendererIpc.sendToMain("notion:set-window-sidebar-state", state);
+        },
+        addListener(fn) {
+            rendererIpc.handleMainToNotionEvent.addListener("notion:set-window-sidebar-state", fn);
+        },
+        removeListener(fn) {
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:set-window-sidebar-state", fn);
+        },
+    },
+    track: {
+        addListener(fn) {
+            rendererIpc.handleMainToNotionEvent.addListener("notion:track", fn);
+        },
+        removeListener(fn) {
+            rendererIpc.handleMainToNotionEvent.removeListener("notion:track", fn);
+        },
+    },
 };
 window["__electronApi"] = electronApi;
 window["__isElectron"] = true;
