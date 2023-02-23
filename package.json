@@ -1,14 +1,14 @@
 {
   "name": "Notion",
   "author": "Notion Labs, Inc",
-  "version": "2.0.39",
+  "version": "2.0.40",
   "private": true,
   "description": "Notion",
   "dependencies": {
     "@reduxjs/toolkit": "1.8.3",
     "@sentry/electron": "2.5.4",
     "abort-controller": "3.0.0",
-    "better-sqlite3": "7.5.2",
+    "better-sqlite3": "8.0.1",
     "bufferutil": "4.0.3",
     "chroma-js": "2.1.2",
     "cld": "2.8.4",
