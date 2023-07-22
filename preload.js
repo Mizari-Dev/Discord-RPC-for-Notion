@@ -26,6 +26,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+require("../helpers/setEnvironment");
 const process_1 = __importDefault(require("process"));
 const electron_1 = __importDefault(require("electron"));
 const rendererIpc = __importStar(require("./rendererIpc"));
@@ -141,20 +142,21 @@ const electronApi = {
         },
     },
     loadSpellcheck: () => {
-        try {
-            const cld = require("cld");
-            electronApi.cld = {
-                detect: (text, fn) => {
-                    cld.detect(text, fn);
-                },
-            };
-        }
-        catch (error) {
-            console.error("Failed to load spellchecker", error);
-        }
+    },
+    getSpellCheckerLanguages() {
+        return rendererIpc.invokeInMainAndReturnResult("notion:get-spellchecker-languages");
+    },
+    getAvailableSpellCheckerLanguages() {
+        return rendererIpc.invokeInMainAndReturnResult("notion:get-available-spellchecker-languages");
     },
     setSpellCheckerLanguages: languages => {
         rendererIpc.sendToMain("notion:set-spellchecker-languages", languages);
+    },
+    setSpellCheckerEnabled: enabled => {
+        rendererIpc.sendToMain("notion:set-spellchecker-enabled", enabled);
+    },
+    addToDictionary: word => {
+        rendererIpc.sendToMain("notion:add-to-dictionary", word);
     },
     contextMenu: {
         addListener: fn => {
@@ -228,6 +230,9 @@ const electronApi = {
     },
     installUpdate() {
         rendererIpc.sendToMain("notion:install-update");
+    },
+    installAppJsUpdate(url) {
+        rendererIpc.sendToMain("notion:install-appjs-update", url);
     },
     updateError: {
         addListener(fn) {
@@ -343,6 +348,10 @@ const electronApi = {
         }
         return invokeResult.value;
     },
+    async isRunningUnderArm64Translation() {
+        var _a;
+        return (_a = electronApi.isRunningUnderArm64Translation) === null || _a === void 0 ? void 0 : _a.call(electronApi);
+    },
     async isMainWindow() {
         if (electronApi.isMainTab) {
             return electronApi.isMainTab();
@@ -422,8 +431,8 @@ const electronApi = {
     setCookie: (args) => {
         rendererIpc.sendToMain("notion:set-cookie", args);
     },
-    setLogglyData: data => {
-        rendererIpc.sendToMain("notion:set-loggly-data", data);
+    setLoggerData: data => {
+        rendererIpc.sendToMain("notion:set-logger-data", data);
     },
     clearCookies: () => {
         rendererIpc.sendToMain("notion:clear-cookies");
@@ -483,6 +492,9 @@ const electronApi = {
     electronAppFeatures: {
         get() {
             return rendererIpc.invokeInMainAndReturnResult("notion:get-electron-app-features");
+        },
+        setPreference(key, value) {
+            rendererIpc.sendToMain("notion:set-user-preference", key, value);
         },
         addListener(fn) {
             rendererIpc.handleMainToNotionEvent.addListener("notion:set-electron-app-features", fn);
