@@ -536,6 +536,12 @@ const electronApi = {
             rendererIpc.handleMainToNotionEvent.removeListener("notion:track", fn);
         },
     },
+    closeGlobalSearchModal() {
+        rendererIpc.sendToMain("notion:close-global-search-modal");
+    },
+    openPageFromGlobalSearch(url) {
+        rendererIpc.sendToMain("notion:open-page-from-global-search", url);
+    },
 };
 window["__electronApi"] = electronApi;
 window["__isElectron"] = true;

@@ -1,13 +1,18 @@
 {
   "name": "Notion",
   "author": "Notion Labs, Inc",
-  "version": "2.0.47",
+  "version": "2.0.49",
   "private": true,
   "description": "Notion",
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
+  },
   "dependencies": {
     "@reduxjs/toolkit": "1.8.3",
     "@sentry/electron": "2.5.4",
-    "better-sqlite3": "8.3.0",
+    "better-sqlite3": "git://github.com/felixrieseberg/better-sqlite3#9f7422d6",
     "bufferutil": "4.0.3",
     "chroma-js": "2.1.2",
     "csp_evaluator": "1.1.0",
@@ -19,7 +24,6 @@
     "fflate": "0.7.4",
     "fs-extra": "8.1.0",
     "get-port": "5.1.1",
-    "linkifyjs": "3.0.1",
     "lodash": "4.17.15",
     "notion-intl": "file:shared/notion-intl",
     "react": "16.10.2",
@@ -28,8 +32,19 @@
     "ws": "7.4.1"
   },
   "main": "./main/main.js",
+  "devDependencies": {
+    "@electron-forge/cli": "6.1.1",
+    "@electron-forge/core": "6.1.1",
+    "@electron-forge/maker-dmg": "6.1.1",
+    "@electron-forge/maker-zip": "6.1.1",
+    "@electron-forge/shared-types": "6.1.1",
+    "@felixrieseberg/electron-forge-maker-nsis": "6.0.6",
+    "@types/ws": "7.4.0",
+    "electron": "25.2.0"
+  },
   "files": [
     "*.js",
     "*.html"
-  ]
+  ],
+  "productName": "Notion"
 }
