@@ -14,5 +14,5 @@ A rich prensence to show Notion on your Discord profile
 
 ![image](https://user-images.githubusercontent.com/39090431/164551243-636deca9-c216-47d6-afd7-127e86f1f610.png)
 ## Contact
-- [Discord](https://discord.gg/N49Gxsu)
+- [Discord](https://discord.gg/neWSxF6)
 - [Twitter](https://twitter.com/Mizari_W)
